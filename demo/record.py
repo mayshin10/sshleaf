@@ -74,10 +74,18 @@ with sync_playwright() as playwright:
     pause(1.2)
 
     # 1. pick a project folder (local or any ~/.ssh/config host)
-    click(page, "#host")
-    pause(0.4)
-    page.select_option("#host", HOST)
-    page.wait_for_function("() => document.getElementById('path').value.startsWith('/home/')")
+    click(page, "#host-btn")
+    page.wait_for_selector("#host-menu.show")
+    pause(0.8)
+    for item in page.locator("#host-menu .dd-item").all():  # glide over the host list
+        box = item.bounding_box()
+        page.mouse.move(box["x"] + 60, box["y"] + box["height"] / 2, steps=8)
+        pause(0.18)
+        if item.get_attribute("data-host") == HOST:
+            break
+    pause(0.5)
+    click(page, f'#host-menu .dd-item[data-host="{HOST}"]')
+    page.wait_for_function(f"() => document.getElementById('host-label').textContent === {HOST!r}")
     page.wait_for_selector('#listing .item.dir[data-name="papers"]')
     pause(1.2)
     click(page, '#listing .item.dir[data-name="papers"]')

@@ -114,6 +114,18 @@ main { flex: 1; display: flex; min-height: 0; }
 .modal .row { display: flex; gap: 8px; align-items: center; }
 .modal .row input { flex: 1; font-family: ui-monospace, Menlo, monospace; }
 .modal .foot { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+.dd { position: relative; }
+#host-btn { display: flex; align-items: center; gap: 6px; min-width: 170px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+#host-btn .caret-dn { margin-left: auto; color: var(--muted); }
+.dd-menu { position: absolute; top: calc(100% + 4px); left: 0; min-width: 230px; max-height: 300px; overflow: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.18); padding: 4px; z-index: 5; display: none; }
+.dd-menu.show { display: block; }
+.dd-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.dd-item:hover, .dd-item.focus { background: var(--hover); }
+.dd-item.selected { background: var(--sel); }
+.dd-sep { height: 1px; background: var(--border); margin: 4px 2px; }
+.dd-head { padding: 4px 8px 2px; font-size: 11px; color: var(--muted); }
+.host-kind { font-size: 10px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; color: var(--muted); }
+.host-kind.ssh { color: var(--accent); border-color: var(--accent); }
 .listing { border: 1px solid var(--border); border-radius: 6px; height: 300px; overflow: auto; }
 .listing .item { padding: 3px 10px; cursor: pointer; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
 .listing .item:hover { background: var(--hover); }
@@ -194,7 +206,10 @@ main { flex: 1; display: flex; min-height: 0; }
     <div class="body">
       <div class="recent" id="recent"></div>
       <div class="row">
-        <select id="host"></select>
+        <div class="dd" id="host-dd">
+          <button id="host-btn" type="button" aria-haspopup="listbox"><span class="host-kind" id="host-kind"></span><span id="host-label">local</span><span class="caret-dn">▾</span></button>
+          <div class="dd-menu" id="host-menu" role="listbox"></div>
+        </div>
         <input type="text" id="path" placeholder="~/path/to/project" spellcheck="false">
         <button id="btn-go">Go</button>
         <button id="btn-up" title="Parent folder">↑</button>
@@ -716,7 +731,7 @@ let browseHost = "local", browsePath = "~";
 async function openDialog() {
   $("open-modal").classList.add("show");
   const hosts = await api("/api/hosts");
-  $("host").innerHTML = hosts.map((h) => `<option ${h === browseHost ? "selected" : ""}>${escapeHtml(h)}</option>`).join("");
+  renderHostMenu(hosts);
   const recent = await api("/api/projects");
   $("recent").innerHTML = recent.length ? '<div class="muted" style="margin-bottom:4px">Recent</div>' + recent.map((p) =>
     `<div class="item" data-host="${escapeHtml(p.host)}" data-root="${escapeHtml(p.root)}"><b>${escapeHtml(p.host)}</b><span class="path">${escapeHtml(p.root)}</span><button class="icon" data-forget="${p.id}" title="Remove from list">✕</button></div>`).join("") : "";
@@ -728,11 +743,18 @@ async function openDialog() {
   }
   browse(browseHost, browsePath);
 }
+function tildify(path, home) {
+  if (!home || home === "/") return path;
+  if (path === home) return "~";
+  return path.startsWith(home + "/") ? "~" + path.slice(home.length) : path;
+}
 async function browse(host, path) {
   $("listing").innerHTML = '<div class="item muted"><span class="spin"></span> loading…</div>';
   try {
     const res = await api(`/api/ls?${q({ host, path })}`);
-    browseHost = host; browsePath = res.path; $("path").value = res.path;
+    browseHost = host; browsePath = res.path; $("path").value = tildify(res.path, res.home);
+    setHostButton(host);
+    for (const el of $("host-menu").querySelectorAll(".dd-item")) el.classList.toggle("selected", el.dataset.host === host);
     const hidden = $("show-hidden").checked;
     $("listing").innerHTML = res.entries.filter((e) => hidden || !e.name.startsWith("."))
       .map((e) => `<div class="item ${e.dir ? "dir" : "file"}" data-name="${escapeHtml(e.name)}">${escapeHtml(e.name)}</div>`).join("")
@@ -744,15 +766,32 @@ async function browse(host, path) {
     $("listing").innerHTML = `<div class="item err-text">${escapeHtml(e.message)}</div>`;
   }
 }
-$("host").onchange = (e) => browse(e.target.value, "~");
-$("btn-go").onclick = () => browse($("host").value, $("path").value.trim() || "~");
+function setHostButton(host) {
+  $("host-label").textContent = host;
+  $("host-kind").textContent = host === "local" ? "local" : "ssh";
+  $("host-kind").className = "host-kind" + (host === "local" ? "" : " ssh");
+}
+function renderHostMenu(hosts) {
+  const item = (h) => `<div class="dd-item ${h === browseHost ? "selected" : ""}" role="option" data-host="${escapeHtml(h)}">
+      <span class="host-kind ${h === "local" ? "" : "ssh"}">${h === "local" ? "local" : "ssh"}</span>${escapeHtml(h === "local" ? "this machine" : h)}</div>`;
+  const remotes = hosts.filter((h) => h !== "local");
+  $("host-menu").innerHTML = item("local")
+    + (remotes.length ? `<div class="dd-sep"></div><div class="dd-head">~/.ssh/config</div>${remotes.map(item).join("")}` : "");
+  for (const el of $("host-menu").querySelectorAll(".dd-item")) {
+    el.onclick = () => { $("host-menu").classList.remove("show"); browse(el.dataset.host, "~"); };
+  }
+  setHostButton(browseHost);
+}
+$("host-btn").onclick = (e) => { e.stopPropagation(); $("host-menu").classList.toggle("show"); };
+document.addEventListener("click", (e) => { if (!e.target.closest("#host-dd")) $("host-menu").classList.remove("show"); });
+$("btn-go").onclick = () => browse(browseHost, $("path").value.trim() || "~");
 $("path").onkeydown = (e) => { if (e.key === "Enter") $("btn-go").click(); };
 $("btn-up").onclick = () => browse(browseHost, browsePath.replace(/\/[^/]+\/?$/, "") || "/");
 $("show-hidden").onchange = () => browse(browseHost, browsePath);
-$("btn-open-here").onclick = () => { closeModal("open-modal"); openProject($("host").value, $("path").value.trim() || browsePath); };
+$("btn-open-here").onclick = () => { closeModal("open-modal"); openProject(browseHost, $("path").value.trim() || browsePath); };
 $("btn-open").onclick = openDialog;
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeModal("open-modal");
+  if (e.key === "Escape") { if ($("host-menu").classList.contains("show")) $("host-menu").classList.remove("show"); else closeModal("open-modal"); }
   if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); compile(); }
   if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); saveCurrent(); }
 });

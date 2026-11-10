@@ -157,10 +157,11 @@ def hosts():
 
 @app.get("/api/ls")
 def list_dir(host: str, path: str = "~"):
-    out = run(host, f"cd {shell_path(path)} && pwd && ls -1Ap").decode(errors="replace").splitlines()
-    entries = [{"name": name.rstrip("/"), "dir": name.endswith("/")} for name in out[1:] if name]
+    out = run(host, f'cd {shell_path(path)} && pwd && cd "$HOME" && pwd && cd - >/dev/null && ls -1Ap')
+    lines = out.decode(errors="replace").splitlines()
+    entries = [{"name": name.rstrip("/"), "dir": name.endswith("/")} for name in lines[2:] if name]
     entries.sort(key=lambda entry: (not entry["dir"], entry["name"].lower()))
-    return {"path": out[0], "entries": entries}
+    return {"path": lines[0], "home": lines[1], "entries": entries}
 
 
 @app.get("/api/projects")

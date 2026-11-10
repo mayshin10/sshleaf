@@ -13,7 +13,7 @@
 
 <p align="center">
   <img src="docs/demo.gif" alt="sshleaf demo: open a project, edit, auto-compile, jump to errors, SyncTeX" width="900">
-  <br><sub>30-second demo (<a href="docs/demo.mp4">MP4</a>): open a folder on <code>remote-server</code> over SSH → edit → <kbd>Ctrl</kbd>+<kbd>S</kbd> recompiles locally → click an error to jump to it → double-click the PDF to jump to the source.</sub>
+  <br><sub>30-second demo (<a href="docs/demo.mp4">MP4</a>): pick <code>remote-server2</code> from your SSH hosts, open a folder → edit → <kbd>Ctrl</kbd>+<kbd>S</kbd> recompiles locally → click an error to jump to it → double-click the PDF to jump to the source.</sub>
 </p>
 
 ---
@@ -130,7 +130,7 @@ uv run sshleaf --no-browser   # restart after editing server code; the UI reload
 ```
 
 The README demo is reproducible: [`demo/make_demo.sh`](demo/make_demo.sh) starts a
-throwaway SSH server (`remote-server`, user `alice`) in Docker, drives sshleaf with
+throwaway SSH server in Docker (`remote-server1..3`, user `alice`), drives sshleaf with
 headless Chrome ([`demo/record.py`](demo/record.py)) and re-encodes `docs/demo.*`.
 
 ## License
