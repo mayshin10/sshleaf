@@ -13,10 +13,8 @@
 
 <p align="center">
   <img src="docs/demo.gif" alt="sshleaf demo: open a project, edit, auto-compile, jump to errors, SyncTeX" width="900">
-  <br><sub>30-second demo (<a href="docs/demo.mp4">MP4</a>): pick <code>remote-server2</code> from your SSH hosts, open a folder → edit → <kbd>Ctrl</kbd>+<kbd>S</kbd> recompiles locally → click an error to jump to it → double-click the PDF to jump to the source.</sub>
+  <br>
 </p>
-
----
 
 ## Why
 
