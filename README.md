@@ -13,7 +13,7 @@
 
 <p align="center">
   <img src="docs/demo.gif" alt="sshleaf demo: open a project, edit, auto-compile, jump to errors, SyncTeX" width="900">
-  <br><sub>30-second demo (<a href="docs/demo.mp4">MP4</a>): open a folder → edit → <kbd>Ctrl</kbd>+<kbd>S</kbd> recompiles → click an error to jump to it → double-click the PDF to jump to the source.</sub>
+  <br><sub>30-second demo (<a href="docs/demo.mp4">MP4</a>): open a folder on <code>remote-server</code> over SSH → edit → <kbd>Ctrl</kbd>+<kbd>S</kbd> recompiles locally → click an error to jump to it → double-click the PDF to jump to the source.</sub>
 </p>
 
 ---
@@ -53,7 +53,13 @@ uv run sshleaf                 # opens http://127.0.0.1:8765
 
 Then click **Open project…** and pick a folder. Try `examples/demo-paper` first.
 
-Options: `uv run sshleaf --port 9000 --no-browser`.
+Options:
+
+```sh
+uv run sshleaf --port 9000            # default 8765
+uv run sshleaf --no-browser           # don't open a browser tab
+uv run sshleaf --ssh-config ./my_cfg  # use another SSH config instead of ~/.ssh/config
+```
 
 > The first compile of a new document may take a while: Tectonic downloads the
 > LaTeX packages it needs once and caches them.
@@ -122,6 +128,10 @@ Issues and pull requests are welcome. The code is intentionally small:
 ```sh
 uv run sshleaf --no-browser   # restart after editing server code; the UI reloads on refresh
 ```
+
+The README demo is reproducible: [`demo/make_demo.sh`](demo/make_demo.sh) starts a
+throwaway SSH server (`remote-server`, user `alice`) in Docker, drives sshleaf with
+headless Chrome ([`demo/record.py`](demo/record.py)) and re-encodes `docs/demo.*`.
 
 ## License
 

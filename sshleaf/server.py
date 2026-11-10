@@ -29,14 +29,19 @@ HOME = Path.home()
 CACHE = HOME / ".cache" / "sshleaf"
 STATE_FILE = HOME / ".config" / "sshleaf" / "state.json"
 STATIC = Path(__file__).parent / "static"
-(CACHE / "cm").mkdir(parents=True, exist_ok=True)
 STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+# SSH control sockets: unix socket paths are limited to ~104 bytes (%C expands to 40 chars)
+CONTROL_DIR = CACHE / "cm"
+if len(str(CONTROL_DIR)) > 60:
+    CONTROL_DIR = Path(f"/tmp/sshleaf-{os.getuid()}")
+CONTROL_DIR.mkdir(parents=True, exist_ok=True)
+CONTROL_DIR.chmod(0o700)
 
 SSH_OPTS = [
     "-o", "BatchMode=yes",
     "-o", "ConnectTimeout=10",
     "-o", "ControlMaster=auto",
-    "-o", f"ControlPath={CACHE}/cm/%C",
+    "-o", f"ControlPath={CONTROL_DIR}/%C",
     "-o", "ControlPersist=600",
 ]
 EXCLUDE = [".git", ".sshleaf-trash", "__pycache__", "node_modules", ".DS_Store", ".venv"]
@@ -46,6 +51,7 @@ app = FastAPI()
 state_lock = threading.Lock()
 compile_locks: dict[str, threading.Lock] = {}
 PORT = 8765
+SSH_CONFIG = HOME / ".ssh" / "config"
 
 
 # ---------------------------------------------------------------- state
@@ -112,7 +118,7 @@ def full_path(project, rel):
 
 
 def ssh_hosts():
-    config = HOME / ".ssh" / "config"
+    config = SSH_CONFIG
     hosts = []
     if config.exists():
         for line in config.read_text().splitlines():
@@ -310,7 +316,7 @@ def sync_mirror(project):
     else:
         source = f"{project['host']}:{project['root'].rstrip('/')}/"
         extra = ["-e", "ssh " + " ".join(shlex.quote(opt) for opt in SSH_OPTS)]
-    proc = subprocess.run(["rsync", "-a", "--delete", *extra, *excludes, source, f"{mirror}/"],
+    proc = subprocess.run(["rsync", "-rlt", "--delete", *extra, *excludes, source, f"{mirror}/"],
                           capture_output=True, text=True, timeout=300)
     if proc.returncode != 0:
         raise HTTPException(500, "rsync failed: " + proc.stderr)
@@ -417,12 +423,16 @@ def synctex_inverse(pid: str, page: int, x: float, y: float):
 # ---------------------------------------------------------------- main
 
 def main():
-    global PORT
+    global PORT, SSH_CONFIG
     parser = argparse.ArgumentParser(prog="sshleaf")
     parser.add_argument("--port", type=int, default=PORT)
     parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--ssh-config", type=Path, help="SSH config file to use instead of ~/.ssh/config")
     args = parser.parse_args()
     PORT = args.port
+    if args.ssh_config:
+        SSH_CONFIG = args.ssh_config.expanduser().resolve()
+        SSH_OPTS[:0] = ["-F", str(SSH_CONFIG)]
     assert shutil.which("tectonic"), "tectonic not found (brew install tectonic)"
     url = f"http://127.0.0.1:{PORT}/"
     print(f"sshleaf on {url}")
