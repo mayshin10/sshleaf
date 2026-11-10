@@ -42,7 +42,12 @@ nothing but `ssh` and `rsync`. It runs on `localhost` and opens in your browser.
 
 ## Quick start
 
-Requirements: Python ≥ 3.11 with [uv](https://docs.astral.sh/uv/), [Tectonic](https://tectonic-typesetting.github.io/en-US/install.html), `rsync`, and key-based SSH access to your servers.
+Requirements:
+
+| Where | What you need |
+|---|---|
+| **Your machine** (runs sshleaf and compiles) | Python ≥ 3.11 with [uv](https://docs.astral.sh/uv/), [Tectonic](https://tectonic-typesetting.github.io/en-US/install.html), `rsync`, a web browser |
+| **Remote servers** | Only your LaTeX project files, plus key-based SSH access and `rsync` (both standard on Linux). **No TeX and no sshleaf install.** |
 
 ```sh
 brew install tectonic          # or: see the Tectonic install page for Linux
