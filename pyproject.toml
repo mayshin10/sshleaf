@@ -1,0 +1,35 @@
+[project]
+name = "sshleaf"
+version = "0.1.0"
+description = "A tiny self-hosted Overleaf-style LaTeX editor for local and SSH projects, compiled locally with Tectonic"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+keywords = ["latex", "overleaf", "ssh", "tectonic", "editor", "synctex"]
+classifiers = [
+    "Environment :: Web Environment",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Text Editors",
+    "Topic :: Text Processing :: Markup :: LaTeX",
+]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+]
+
+[project.urls]
+Homepage = "https://github.com/mayshin10/sshleaf"
+Issues = "https://github.com/mayshin10/sshleaf/issues"
+
+[project.scripts]
+sshleaf = "sshleaf.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sshleaf"]

@@ -1,0 +1,67 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{hyperref}
+
+\title{A Tiny Demo Paper}
+\author{sshleaf}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+  This is a small example project for sshleaf. Open it, edit any line,
+  press \texttt{Ctrl+S}, and watch the PDF update.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+sshleaf edits LaTeX projects that live on your machine or on any SSH host,
+and compiles them locally with Tectonic~\cite{tectonic}.
+Double-click anywhere in the PDF to jump to the matching source line.
+
+\section{Method}
+
+We minimize a simple quadratic objective,
+\begin{equation}
+  \mathcal{L}(\theta) = \frac{1}{2} \lVert A \theta - b \rVert_2^2,
+  \qquad
+  \theta^\star = (A^\top A)^{-1} A^\top b .
+\end{equation}
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[scale=1.1]
+    \draw[->] (0,0) -- (4.2,0) node[right] {$x$};
+    \draw[->] (0,0) -- (0,2.6) node[above] {$y$};
+    \draw[thick, blue, domain=0:4, smooth] plot (\x, {0.15*\x*\x});
+    \foreach \x/\y in {0.5/0.2, 1.4/0.2, 2.1/0.8, 2.9/1.2, 3.6/2.1}
+      \fill[red] (\x,\y) circle (2pt);
+  \end{tikzpicture}
+  \caption{A fitted curve and a few data points.}
+  \label{fig:fit}
+\end{figure}
+
+\section{Results}
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Method & Error & Time (s) \\
+    \midrule
+    Baseline & 0.42 & 1.0 \\
+    Ours     & 0.17 & 0.8 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Toy results.}
+\end{table}
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}
