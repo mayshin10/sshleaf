@@ -81,31 +81,6 @@ uv run sshleaf --ssh-config ./my_cfg  # use another SSH config instead of ~/.ssh
 | Go to line | <kbd>Ctrl/⌘</kbd>+<kbd>L</kbd> |
 | Toggle comment | <kbd>Ctrl/⌘</kbd>+<kbd>/</kbd> |
 
-## How it works
-
-```
- browser (127.0.0.1:8765)
-   │  edit / save / browse                     compile
-   ▼                                              │
- sshleaf server ──── ssh host 'cat / mv …' ───►  project folder (in place)
-   │                                              │
-   └── rsync host:project/ → ~/.cache/sshleaf/mirror/<id>/
-                                   │
-                         tectonic -X compile --synctex
-                                   │
-                     ~/.cache/sshleaf/build/<id>/main.pdf ──► PDF.js viewer
-```
-
-- File operations run as plain POSIX shell commands, locally or through
-  `ssh` (with connection reuse via `ControlMaster`), so any Linux/macOS host works.
-- Saves are atomic (write to a temp file, then `mv`) and carry the hash of the
-  version you opened, which is how on-disk conflicts are detected.
-- Compiles sync the project into a local mirror with `rsync` and build it with
-  Tectonic. The PDF stays in the cache; **⇧PDF** copies it into the project.
-
-State lives in `~/.config/sshleaf/state.json` (recent projects, main file) and
-`~/.cache/sshleaf/` (mirrors, builds, SSH control sockets).
-
 ## Security
 
 sshleaf is a single-user tool with **no authentication**. It binds to
