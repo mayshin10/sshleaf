@@ -40,10 +40,16 @@ CONTROL_DIR.chmod(0o700)
 SSH_OPTS = [
     "-o", "BatchMode=yes",
     "-o", "ConnectTimeout=10",
+]
+# Used only for hosts whose ssh config does not set its own ControlPath. Hosts that
+# do (e.g. clusters with Duo/2FA) keep the user's master connection, so one
+# interactive login in a terminal also lets sshleaf in.
+CONTROL_OPTS = [
     "-o", "ControlMaster=auto",
     "-o", f"ControlPath={CONTROL_DIR}/%C",
     "-o", "ControlPersist=600",
 ]
+_host_opts: dict[str, list[str]] = {}
 EXCLUDE = [".git", ".sshleaf-trash", "__pycache__", "node_modules", ".DS_Store", ".venv"]
 TRASH = ".sshleaf-trash"
 
@@ -90,11 +96,31 @@ def update_project(pid, **fields):
 
 def run(host, cmd, data=None, timeout=60):
     """Run a POSIX shell command locally or on an SSH host; return stdout bytes."""
-    args = ["bash", "-c", cmd] if host == "local" else ["ssh", *SSH_OPTS, host, cmd]
+    args = ["bash", "-c", cmd] if host == "local" else ["ssh", *ssh_opts(host), host, cmd]
     proc = subprocess.run(args, input=data, capture_output=True, timeout=timeout)
     if proc.returncode != 0:
-        raise HTTPException(500, proc.stderr.decode(errors="replace").strip() or f"exit {proc.returncode}")
+        message = proc.stderr.decode(errors="replace").strip() or f"exit {proc.returncode}"
+        if host != "local" and proc.returncode == 255:
+            message += (f"\n\nCould not connect without a password prompt. If {host} needs a password"
+                        f" or 2FA, run `ssh {host}` in a terminal first and keep it open.")
+        raise HTTPException(500, message)
     return proc.stdout
+
+
+def ssh_opts(host):
+    """SSH options for host: reuse the user's own ControlPath if their config sets one."""
+    if host not in _host_opts:
+        opts = list(SSH_OPTS)
+        try:
+            out = subprocess.run(["ssh", *SSH_OPTS, "-G", host], capture_output=True,
+                                 text=True, timeout=10).stdout
+            own = {k: v for k, _, v in (line.partition(" ") for line in out.splitlines())}
+        except (OSError, subprocess.TimeoutExpired):
+            own = {}
+        if own.get("controlpath", "none") == "none":
+            opts += CONTROL_OPTS
+        _host_opts[host] = opts
+    return _host_opts[host]
 
 
 def shell_path(path):
@@ -316,7 +342,7 @@ def sync_mirror(project):
         source, extra = project["root"].rstrip("/") + "/", []
     else:
         source = f"{project['host']}:{project['root'].rstrip('/')}/"
-        extra = ["-e", "ssh " + " ".join(shlex.quote(opt) for opt in SSH_OPTS)]
+        extra = ["-e", "ssh " + " ".join(shlex.quote(opt) for opt in ssh_opts(project["host"]))]
     proc = subprocess.run(["rsync", "-rlt", "--delete", *extra, *excludes, source, f"{mirror}/"],
                           capture_output=True, text=True, timeout=300)
     if proc.returncode != 0:
